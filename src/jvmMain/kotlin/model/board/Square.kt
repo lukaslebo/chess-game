@@ -7,6 +7,7 @@ private val darkSquareColor = Color(0xFF769656)
 
 class Square(
     val position: Position,
+    val piece: Piece? = null,
 ) {
     val isLightSquare = (position.ordinal + position.file.ordinal % 2) % 2 == 1
     val isDarkSquare = (position.ordinal + position.file.ordinal % 2) % 2 == 0

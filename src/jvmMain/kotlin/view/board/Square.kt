@@ -10,6 +10,7 @@ fun Square(square: Square) {
     squareDecorators.forEach {
         it.decorate(square)
     }
+    Piece(square)
 }
 
 private val squareDecorators = arrayOf(
