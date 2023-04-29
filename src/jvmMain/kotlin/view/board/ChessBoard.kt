@@ -6,21 +6,48 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import model.board.*
-import model.board.Set
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
+import model.board.File
+import model.board.Position
+import model.board.Rank
+import model.board.Square
+import model.service.DefaultChessUiService
+import model.state.GameState
 
 @Composable
-fun ChessBoard() {
-    val squaresByPosition = Position.values().associateWith { Square(it, initialPieces[it]) }
+fun ChessBoard(
+    gameState: GameState,
+    onClick: (Position) -> Unit,
+    onDragStart: (Position) -> Unit,
+    onDrag: (Offset) -> Unit,
+    onDragEnd: () -> Unit,
+) {
+    val squaresByPosition = Position.values().associateWith { Square(it, gameState) }
 
-    Box(modifier = Modifier.aspectRatio(1f)) {
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .onSizeChanged { DefaultChessUiService.onSquareSizeChanged(it.width / 8) }
+    ) {
         Column {
             for (rank in Rank.values().reversed()) {
-                Row(modifier = Modifier.weight(1f)) {
+                val zIndexRow = if (gameState.activePosition?.rank == rank) 1f else 0f
+
+                Row(modifier = Modifier.weight(1f).zIndex(zIndexRow)) {
                     for (file in File.values()) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            val square = squaresByPosition.getValue(Position.fromFileAndRank(file, rank))
-                            Square(square)
+                        val square = squaresByPosition.getValue(Position.fromFileAndRank(file, rank))
+                        val zIndexSquare = if (square.isActive) 1f else 0f
+
+                        Box(modifier = Modifier.weight(1f).zIndex(zIndexSquare)) {
+                            Square(
+                                square = square,
+                                onClick = onClick,
+                                onDragStart = onDragStart,
+                                onDrag = onDrag,
+                                onDragEnd = onDragEnd,
+                            )
                         }
                     }
                 }
@@ -28,41 +55,3 @@ fun ChessBoard() {
         }
     }
 }
-
-private val initialPieces = mapOf(
-    Position.a8 to Rook(Set.BLACK),
-    Position.b8 to Knight(Set.BLACK),
-    Position.c8 to Bishop(Set.BLACK),
-    Position.d8 to Queen(Set.BLACK),
-    Position.e8 to King(Set.BLACK),
-    Position.f8 to Bishop(Set.BLACK),
-    Position.g8 to Knight(Set.BLACK),
-    Position.h8 to Rook(Set.BLACK),
-
-    Position.a7 to Pawn(Set.BLACK),
-    Position.b7 to Pawn(Set.BLACK),
-    Position.c7 to Pawn(Set.BLACK),
-    Position.d7 to Pawn(Set.BLACK),
-    Position.e7 to Pawn(Set.BLACK),
-    Position.f7 to Pawn(Set.BLACK),
-    Position.g7 to Pawn(Set.BLACK),
-    Position.h7 to Pawn(Set.BLACK),
-
-    Position.a2 to Pawn(Set.WHITE),
-    Position.b2 to Pawn(Set.WHITE),
-    Position.c2 to Pawn(Set.WHITE),
-    Position.d2 to Pawn(Set.WHITE),
-    Position.e2 to Pawn(Set.WHITE),
-    Position.f2 to Pawn(Set.WHITE),
-    Position.g2 to Pawn(Set.WHITE),
-    Position.h2 to Pawn(Set.WHITE),
-
-    Position.a1 to Rook(Set.WHITE),
-    Position.b1 to Knight(Set.WHITE),
-    Position.c1 to Bishop(Set.WHITE),
-    Position.d1 to Queen(Set.WHITE),
-    Position.e1 to King(Set.WHITE),
-    Position.f1 to Bishop(Set.WHITE),
-    Position.g1 to Knight(Set.WHITE),
-    Position.h1 to Rook(Set.WHITE),
-)

@@ -25,7 +25,12 @@ kotlin {
                 implementation(compose.desktop.currentOs)
             }
         }
-        val jvmTest by getting
+        val jvmTest by getting {
+            dependencies {
+                implementation("org.jetbrains.kotlin:kotlin-test")
+                implementation("org.junit.jupiter:junit-jupiter:5.9.3")
+            }
+        }
     }
 }
 
@@ -38,4 +43,8 @@ compose.desktop {
             packageVersion = "1.0.0"
         }
     }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
