@@ -1,6 +1,8 @@
 package model.board
 
 import androidx.compose.ui.graphics.Color
+import model.move.CapturingMove
+import model.move.NonCapturingMove
 import model.state.GameState
 
 private val lightSquareColor = Color(0xFFEEEED2)
@@ -12,6 +14,9 @@ class Square(
 ) {
     val isActive = gameState.activePosition == position
     val piece: Piece? = gameState.piecesByPosition[position]
+
+    val isLegalMove = gameState.legalMoves.filterIsInstance<NonCapturingMove>().any { it.to == position }
+    val isCapture = gameState.legalMoves.filterIsInstance<CapturingMove>().any { it.to == position }
 
     val isLightSquare = (position.ordinal + position.file.ordinal % 2) % 2 == 1
     val isDarkSquare = (position.ordinal + position.file.ordinal % 2) % 2 == 0

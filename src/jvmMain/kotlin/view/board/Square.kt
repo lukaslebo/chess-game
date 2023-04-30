@@ -9,9 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import model.board.Position
 import model.board.Square
-import view.board.decorator.ActivePieceDecorator
-import view.board.decorator.BackgroundDecorator
-import view.board.decorator.LabelDecorator
+import view.board.decorator.*
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -42,5 +40,7 @@ fun Square(
 private val squareDecorators = arrayOf(
     BackgroundDecorator,
     ActivePieceDecorator,
+    LegalMoveDecorator,
+    CaptureDecorator,
     LabelDecorator,
 )

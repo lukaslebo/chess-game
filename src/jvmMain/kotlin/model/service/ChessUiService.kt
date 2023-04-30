@@ -1,13 +1,12 @@
 package model.service
 
 import androidx.compose.ui.geometry.Offset
-import model.board.File
-import model.board.Position
-import model.board.Rank
-import model.state.BoardMove
+import model.board.*
+import model.move.CapturingMove
+import model.move.Move
+import model.service.move.pseudoLegalMoves
 import model.state.BoardSnapshot
 import model.state.GameState
-import model.state.Move
 import kotlin.math.max
 import kotlin.math.min
 
@@ -29,11 +28,21 @@ object DefaultChessUiService : ChessUiService {
 
     override fun onClick(position: Position) {
         val activePosition = gameState.activePosition
+        val piece = gameState.piecesByPosition[position]
+        val move = gameState.legalMoves.find { it.from == gameState.activePosition && it.to == position }
 
-        if (activePosition != null) {
-            gameState = gameState.applyMove(Move(activePosition, position))
-        } else if (position in gameState.piecesByPosition) {
-            gameState = gameState.copy(activePosition = position)
+        if (move != null) {
+            gameState = gameState.applyMove(move)
+        } else if (activePosition != null) {
+            gameState = gameState.copy(
+                activePosition = null,
+                legalMoves = emptyList(),
+            )
+        } else if (piece != null) {
+            gameState = gameState.copy(
+                activePosition = position,
+                legalMoves = legalMoves(piece = piece, gameState = gameState),
+            )
         }
 
         update()
@@ -41,8 +50,10 @@ object DefaultChessUiService : ChessUiService {
 
     override fun onDragStart(position: Position) {
         val squareSize = gameState.uiState.squareSize
+        val piece = gameState.piecesByPosition[position] ?: error("Can only drag when piece is on square")
         gameState = gameState.copy(
             activePosition = position,
+            legalMoves = legalMoves(piece = piece, gameState = gameState),
             uiState = gameState.uiState.copy(
                 pieceMinDragOffset = Offset(
                     (-position.file.ordinal * squareSize - squareSize / 2).toFloat(),
@@ -74,14 +85,16 @@ object DefaultChessUiService : ChessUiService {
     }
 
     override fun onDragEnd() {
-        val fromPosition = gameState.activePosition
-        val toPosition = fromPosition?.getTargetPosition(
+        val fromPosition = gameState.activePosition ?: error("Can only drag with active square")
+        val toPosition = fromPosition.getTargetPosition(
             offset = gameState.uiState.constrainedPieceDragOffset,
             squareSize = gameState.uiState.squareSize,
         )
 
-        if (fromPosition != null && toPosition != null) {
-            gameState = gameState.applyMove(Move(fromPosition, toPosition))
+        val move = gameState.legalMoves.find { it.from == gameState.activePosition && it.to == toPosition }
+
+        if (move != null) {
+            gameState = gameState.applyMove(move)
         }
 
         gameState = gameState.copy(
@@ -129,35 +142,42 @@ fun Position.getTargetPosition(offset: Offset, squareSize: Int): Position? {
 }
 
 fun GameState.applyMove(move: Move): GameState {
-    if (move.from == move.to) return copy(activePosition = null)
-
-    val piece = piecesByPosition[move.from] ?: error("No piece on position ${move.from}")
-    val capturedPiece = piecesByPosition[move.to]
-
-    val boardMove = BoardMove(
-        piece = piece,
-        from = move.from,
-        to = move.to,
-        capturedPiece = capturedPiece,
+    if (move.from == move.to) return copy(
+        activePosition = null,
+        legalMoves = emptyList(),
     )
-
-    val newPiecesByPosition = piecesByPosition
-        .minus(move.from)
-        .minus(move.from)
-        .plus(move.to to piece)
 
     return copy(
         activePosition = null,
+        legalMoves = emptyList(),
         boardSnapshots = boardSnapshots.dropLast(1) + BoardSnapshot(
             piecesByPosition = piecesByPosition,
             setToPlay = setToPlay,
-            move = boardMove,
+            move = move,
         ) + BoardSnapshot(
-            piecesByPosition = newPiecesByPosition,
+            piecesByPosition = move.applyOn(piecesByPosition),
             setToPlay = setToPlay.opposite,
             move = null,
         ),
     )
 }
 
+private fun legalMoves(piece: Piece, gameState: GameState): List<Move> {
+    if (piece.set != gameState.setToPlay) return emptyList()
+
+    val pseudoLegalMoves = piece.pseudoLegalMoves(gameState, true)
+
+    return pseudoLegalMoves.filter { !gameState.isKingInCheck(it) }
+}
+
+private fun GameState.isKingInCheck(move: Move): Boolean {
+    val nextGameState = applyMove(move)
+
+    val opponentSet = move.piece.set.opposite
+    val opponentPieces = nextGameState.piecesByPosition.values.filter { it.set == opponentSet }
+    return opponentPieces
+        .flatMap { it.pseudoLegalMoves(nextGameState) }
+        .filterIsInstance<CapturingMove>()
+        .any { it.capturedPiece is King }
+}
 

@@ -19,6 +19,11 @@ class King(override val set: Set) : Piece {
     override val textSymbol = "K"
     override val value = 0
     override val asset = "chess_king_${set.name.lowercase()}.svg"
+
+    val startingRank = when (set) {
+        WHITE -> Rank.r1
+        BLACK -> Rank.r8
+    }
 }
 
 class Queen(override val set: Set) : Piece {
@@ -69,4 +74,14 @@ class Pawn(override val set: Set) : Piece {
     override val textSymbol = ""
     override val value = 1
     override val asset = "chess_pawn_${set.name.lowercase()}.svg"
+
+    val startingRank = when (set) {
+        WHITE -> Rank.r2
+        BLACK -> Rank.r7
+    }
+
+    val rankAfterDoubleMove = when (set) {
+        WHITE -> Rank.r4
+        BLACK -> Rank.r5
+    }
 }
