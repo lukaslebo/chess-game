@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import model.board.*
 import model.move.CapturingMove
 import model.move.Move
+import model.move.Promotion
 import model.service.move.pseudoLegalMoves
 import model.state.BoardSnapshot
 import model.state.GameState
@@ -16,6 +17,7 @@ interface ChessUiService {
     fun onDragStart(position: Position)
     fun onDrag(offset: Offset)
     fun onDragEnd()
+    fun applyPromotion(promotion: Promotion)
     fun onSquareSizeChanged(squareSize: Int)
     fun updateOnStateChanges(onState: GameStateObserver)
 }
@@ -27,28 +29,37 @@ object DefaultChessUiService : ChessUiService {
     private val observers = HashSet<GameStateObserver>()
 
     override fun onClick(position: Position) {
+        if (gameState.promotionSelection.isNotEmpty()) return
         val activePosition = gameState.activePosition
         val piece = gameState.piecesByPosition[position]
         val move = gameState.legalMoves.find { it.from == gameState.activePosition && it.to == position }
 
-        if (move != null) {
-            gameState = gameState.applyMove(move)
-        } else if (activePosition != null) {
-            gameState = gameState.copy(
+        gameState =
+            if (move is Promotion)
+                gameState.copy(
+                    activePosition = null,
+                    legalMoves = emptyList(),
+                    promotionSelection = gameState.legalMoves.filterIsInstance<Promotion>().filter { it.to == move.to },
+                )
+            else if (move != null)
+                gameState.applyMove(move)
+            else if (activePosition != null) gameState.copy(
                 activePosition = null,
                 legalMoves = emptyList(),
             )
-        } else if (piece != null) {
-            gameState = gameState.copy(
-                activePosition = position,
-                legalMoves = legalMoves(piece = piece, gameState = gameState),
-            )
-        }
+            else if (piece != null)
+                gameState.copy(
+                    activePosition = position,
+                    legalMoves = legalMoves(piece = piece, gameState = gameState),
+                )
+            else gameState
 
         update()
     }
 
     override fun onDragStart(position: Position) {
+        if (gameState.promotionSelection.isNotEmpty()) return
+
         val squareSize = gameState.uiState.squareSize
         val piece = gameState.piecesByPosition[position] ?: error("Can only drag when piece is on square")
         gameState = gameState.copy(
@@ -69,6 +80,8 @@ object DefaultChessUiService : ChessUiService {
     }
 
     override fun onDrag(offset: Offset) {
+        if (gameState.promotionSelection.isNotEmpty()) return
+
         val newOffset = gameState.uiState.pieceDragOffset + offset
         val min = gameState.uiState.pieceMinDragOffset
         val max = gameState.uiState.pieceMaxDragOffset
@@ -85,6 +98,8 @@ object DefaultChessUiService : ChessUiService {
     }
 
     override fun onDragEnd() {
+        if (gameState.promotionSelection.isNotEmpty()) return
+
         val fromPosition = gameState.activePosition ?: error("Can only drag with active square")
         val toPosition = fromPosition.getTargetPosition(
             offset = gameState.uiState.constrainedPieceDragOffset,
@@ -93,18 +108,28 @@ object DefaultChessUiService : ChessUiService {
 
         val move = gameState.legalMoves.find { it.from == gameState.activePosition && it.to == toPosition }
 
-        if (move != null) {
+        if (move is Promotion) {
+            gameState = gameState.copy(
+                promotionSelection = gameState.legalMoves.filterIsInstance<Promotion>().filter { it.to == move.to },
+            )
+        } else if (move != null) {
             gameState = gameState.applyMove(move)
+        } else {
+            gameState = gameState.copy(
+                uiState = gameState.uiState.copy(
+                    pieceDragOffset = Offset.Zero,
+                    pieceMinDragOffset = Offset.Zero,
+                    pieceMaxDragOffset = Offset.Zero,
+                    constrainedPieceDragOffset = Offset.Zero,
+                ),
+            )
         }
 
-        gameState = gameState.copy(
-            uiState = gameState.uiState.copy(
-                pieceDragOffset = Offset.Zero,
-                pieceMinDragOffset = Offset.Zero,
-                pieceMaxDragOffset = Offset.Zero,
-                constrainedPieceDragOffset = Offset.Zero,
-            ),
-        )
+        update()
+    }
+
+    override fun applyPromotion(promotion: Promotion) {
+        gameState = gameState.applyMove(promotion)
         update()
     }
 
@@ -158,6 +183,13 @@ fun GameState.applyMove(move: Move): GameState {
             piecesByPosition = move.applyOn(piecesByPosition),
             setToPlay = setToPlay.opposite,
             move = null,
+        ),
+        promotionSelection = emptyList(),
+        uiState = uiState.copy(
+            pieceDragOffset = Offset.Zero,
+            pieceMinDragOffset = Offset.Zero,
+            pieceMaxDragOffset = Offset.Zero,
+            constrainedPieceDragOffset = Offset.Zero,
         ),
     )
 }

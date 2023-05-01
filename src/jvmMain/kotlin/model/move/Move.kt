@@ -28,6 +28,29 @@ data class StandardMove(
     override fun applyOn(board: Board) = board.minus(from).plus(to to piece)
 }
 
+sealed interface Promotion : Move {
+    val pieceAfterPromotion: Piece
+}
+
+data class StandardPromotion(
+    override val piece: Pawn,
+    override val from: Position,
+    override val to: Position,
+    override val pieceAfterPromotion: Piece,
+) : NonCapturingMove, Promotion {
+    override fun applyOn(board: Board) = board.minus(from).plus(to to pieceAfterPromotion)
+}
+
+data class CapturePromotion(
+    override val piece: Pawn,
+    override val from: Position,
+    override val to: Position,
+    override val pieceAfterPromotion: Piece,
+    override val capturedPiece: Piece,
+) : CapturingMove, Promotion {
+    override fun applyOn(board: Board) = board.minus(from).plus(to to pieceAfterPromotion)
+}
+
 data class Capture(
     override val piece: Piece,
     override val from: Position,

@@ -53,5 +53,6 @@ fun ChessBoard(
                 }
             }
         }
+        PromotionSelection(gameState)
     }
 }

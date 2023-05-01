@@ -55,6 +55,7 @@ fun App() {
                 onDragStart = DefaultChessUiService::onDragStart,
                 onDrag = DefaultChessUiService::onDrag,
                 onDragEnd = DefaultChessUiService::onDragEnd,
+                applyPromotion = DefaultChessUiService::applyPromotion,
             )
         }
     }

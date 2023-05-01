@@ -29,7 +29,7 @@ fun Pawn.pseudoLegalPawnMoves(gameState: GameState): List<Move> {
         moveInfo.capture(Right),
         moveInfo.enPassantCapture(Left),
         moveInfo.enPassantCapture(Right),
-    )
+    ).flatMap { it.mapToPromotionIfPossible() }
 }
 
 private data class MoveInfo(
@@ -101,3 +101,33 @@ private fun MoveInfo.enPassantCapture(side: Int): Move? {
 }
 
 private fun List<BoardSnapshot>.previous() = getOrNull(lastIndex - 1)
+
+private val Set.promotionOnRank
+    get() = when (this) {
+        Set.WHITE -> Rank.r8
+        Set.BLACK -> Rank.r1
+    }
+
+private fun Move.mapToPromotionIfPossible(): List<Move> =
+    if (to.rank == piece.set.promotionOnRank) mapToPromotions()
+    else listOf(this)
+
+private fun Move.mapToPromotions() =
+    listOf(Queen(piece.set), Knight(piece.set), Rook(piece.set), Bishop(piece.set)).map {
+        when (this) {
+            is NonCapturingMove -> StandardPromotion(
+                piece = piece as Pawn,
+                from = from,
+                to = to,
+                pieceAfterPromotion = it,
+            )
+
+            is CapturingMove -> CapturePromotion(
+                piece = piece as Pawn,
+                from = from,
+                to = to,
+                pieceAfterPromotion = it,
+                capturedPiece = capturedPiece,
+            )
+        }
+    }

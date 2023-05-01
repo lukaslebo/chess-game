@@ -8,6 +8,7 @@ import model.board.Set.BLACK
 import model.board.Set.WHITE
 import model.move.Board
 import model.move.Move
+import model.move.Promotion
 
 data class GameState(
     val activePosition: Position? = null,
@@ -18,6 +19,7 @@ data class GameState(
             setToPlay = WHITE,
         )
     ),
+    val promotionSelection: List<Promotion> = emptyList(),
     val uiState: UiState = UiState(),
 ) {
     val piecesByPosition = boardSnapshots.last().piecesByPosition
