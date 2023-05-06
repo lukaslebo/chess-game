@@ -18,6 +18,7 @@ interface ChessUiService {
     fun onDrag(offset: Offset)
     fun onDragEnd()
     fun applyPromotion(promotion: Promotion)
+    fun cancelPromotion()
     fun onSquareSizeChanged(squareSize: Int)
     fun updateOnStateChanges(onState: GameStateObserver)
 }
@@ -130,6 +131,19 @@ object DefaultChessUiService : ChessUiService {
 
     override fun applyPromotion(promotion: Promotion) {
         gameState = gameState.applyMove(promotion)
+        update()
+    }
+
+    override fun cancelPromotion() {
+        gameState = gameState.copy(
+            promotionSelection = emptyList(),
+            uiState = gameState.uiState.copy(
+                pieceDragOffset = Offset.Zero,
+                pieceMinDragOffset = Offset.Zero,
+                pieceMaxDragOffset = Offset.Zero,
+                constrainedPieceDragOffset = Offset.Zero,
+            )
+        )
         update()
     }
 

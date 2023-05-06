@@ -13,6 +13,7 @@ import model.board.File
 import model.board.Position
 import model.board.Rank
 import model.board.Square
+import model.move.Promotion
 import model.service.DefaultChessUiService
 import model.state.GameState
 
@@ -23,6 +24,8 @@ fun ChessBoard(
     onDragStart: (Position) -> Unit,
     onDrag: (Offset) -> Unit,
     onDragEnd: () -> Unit,
+    applyPromotion: (Promotion) -> Unit,
+    cancelPromotion: () -> Unit,
 ) {
     val squaresByPosition = Position.values().associateWith { Square(it, gameState) }
 
@@ -53,6 +56,10 @@ fun ChessBoard(
                 }
             }
         }
-        PromotionSelection(gameState)
+        PromotionSelection(
+            gameState = gameState,
+            applyPromotion = applyPromotion,
+            cancelPromotion = cancelPromotion,
+        )
     }
 }
